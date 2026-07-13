@@ -13,3 +13,4 @@ chat_memory.db
 htmlcov/
 on_github/
 WALKTHROUGH.md
+tests/

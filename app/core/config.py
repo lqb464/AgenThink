@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str
     OPENAI_BASE_URL: str
 
+    # Production knobs
+    API_TOKEN: str = ""
+    RATE_LIMIT_MAX_CALLS: int = 30
+    RATE_LIMIT_WINDOW_SECONDS: float = 60.0
+    CACHE_ENABLED: bool = True
+    ESTIMATED_COST_PER_CALL_USD: float = 0.0002
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

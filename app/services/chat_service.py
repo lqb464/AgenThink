@@ -5,8 +5,11 @@ from app.agent.multi_agent import run_multi_agent
 from app.agent.planner import match_plan_request, run_planning
 from app.agent.reflection import reflect_until_good
 from app.agent.workflow import match_workflow, run_workflow
+from app.core.cache import response_cache
 from app.core.client import llm
 from app.core.config import settings
+from app.core.observability import new_trace, timed_event
+from app.core.retry import with_retry
 from app.memory import extract_and_store, format_memory
 from app.rag import format_context, retrieve
 from app.tools import run_tool
@@ -49,48 +52,7 @@ def _build_prompt(message: str, rag_context: str = "", memory_context: str = "")
     return "\n".join(prompt_lines)
 
 
-def chat(message: str) -> str:
-    memory_ack = extract_and_store(message)
-    if memory_ack is not None:
-        conversation_store.append({"role": "user", "content": message})
-        conversation_store.append({"role": "assistant", "content": memory_ack})
-        return memory_ack
-
-    workflow_name = match_workflow(message)
-    if workflow_name is not None:
-        response = run_workflow(workflow_name)
-        conversation_store.append({"role": "user", "content": message})
-        conversation_store.append({"role": "assistant", "content": response})
-        return response
-
-    multi_match = _MULTI_AGENT_RE.match(message.strip())
-    if multi_match:
-        response = run_multi_agent(multi_match.group(1).strip())
-        conversation_store.append({"role": "user", "content": message})
-        conversation_store.append({"role": "assistant", "content": response})
-        return response
-
-    autonomous_match = _AUTONOMOUS_RE.match(message.strip())
-    if autonomous_match:
-        response = run_autonomous(autonomous_match.group(1).strip())
-        conversation_store.append({"role": "user", "content": message})
-        conversation_store.append({"role": "assistant", "content": response})
-        return response
-
-    goal = match_plan_request(message)
-    if goal is not None:
-        response = run_planning(goal)
-        conversation_store.append({"role": "user", "content": message})
-        conversation_store.append({"role": "assistant", "content": response})
-        return response
-
-    tool_hit = run_tool(message)
-    if tool_hit is not None:
-        _tool_name, tool_result = tool_hit
-        conversation_store.append({"role": "user", "content": message})
-        conversation_store.append({"role": "assistant", "content": tool_result})
-        return tool_result
-
+def _generate_llm_answer(message: str) -> str:
     docs = retrieve(message, top_k=2)
     rag_context = format_context(docs)
     memory_context = format_memory()
@@ -99,10 +61,63 @@ def chat(message: str) -> str:
         rag_context=rag_context,
         memory_context=memory_context,
     )
-    draft = llm.chat(prompt)
-    response = reflect_until_good(message, draft)
+    draft = with_retry(lambda: llm.chat(prompt), retries=2)
+    return reflect_until_good(message, draft)
+
+
+def chat_with_trace(message: str) -> tuple[str, dict]:
+    """Production entrypoint: answer + observability metadata."""
+    trace = new_trace()
+
+    if settings.CACHE_ENABLED:
+        cached = response_cache.get(message)
+        if cached is not None:
+            trace.add("cache_hit", "served from LRU cache")
+            return cached, {**trace.summary(), "cached": True}
+
+    with timed_event(trace, "route", message[:80]):
+        memory_ack = extract_and_store(message)
+        if memory_ack is not None:
+            response = memory_ack
+        else:
+            workflow_name = match_workflow(message)
+            multi_match = _MULTI_AGENT_RE.match(message.strip())
+            autonomous_match = _AUTONOMOUS_RE.match(message.strip())
+            goal = match_plan_request(message)
+            tool_hit = run_tool(message)
+
+            if workflow_name is not None:
+                trace.add("workflow", workflow_name)
+                response = run_workflow(workflow_name)
+            elif multi_match:
+                trace.add("multi_agent", multi_match.group(1).strip()[:80])
+                response = run_multi_agent(multi_match.group(1).strip())
+            elif autonomous_match:
+                trace.add("autonomous", autonomous_match.group(1).strip()[:80])
+                response = run_autonomous(autonomous_match.group(1).strip())
+            elif goal is not None:
+                trace.add("planning", goal[:80])
+                response = run_planning(goal)
+            elif tool_hit is not None:
+                tool_name, tool_result = tool_hit
+                trace.add("tool", tool_name)
+                response = tool_result
+            else:
+                with timed_event(trace, "llm_with_reflection"):
+                    response = _generate_llm_answer(message)
+                trace.add_cost(settings.ESTIMATED_COST_PER_CALL_USD)
 
     conversation_store.append({"role": "user", "content": message})
     conversation_store.append({"role": "assistant", "content": response})
 
-    return response
+    if settings.CACHE_ENABLED:
+        response_cache.set(message, response)
+
+    summary = trace.summary()
+    summary["cached"] = False
+    return response, summary
+
+
+def chat(message: str) -> str:
+    answer, _meta = chat_with_trace(message)
+    return answer
