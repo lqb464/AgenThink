@@ -1,10 +1,9 @@
-from app.agent import (
-    match_plan_request,
-    match_workflow,
-    reflect_until_good,
-    run_planning,
-    run_workflow,
-)
+import re
+
+from app.agent.autonomous import run_autonomous
+from app.agent.planner import match_plan_request, run_planning
+from app.agent.reflection import reflect_until_good
+from app.agent.workflow import match_workflow, run_workflow
 from app.core.client import llm
 from app.core.config import settings
 from app.memory import extract_and_store, format_memory
@@ -13,6 +12,11 @@ from app.tools import run_tool
 
 
 conversation_store: list[dict[str, str]] = []
+
+_AUTONOMOUS_RE = re.compile(
+    r"^(?:Goal|Mục tiêu)\s*[:\-]\s*(.+)$",
+    flags=re.IGNORECASE,
+)
 
 
 def _build_prompt(message: str, rag_context: str = "", memory_context: str = "") -> str:
@@ -50,6 +54,13 @@ def chat(message: str) -> str:
     workflow_name = match_workflow(message)
     if workflow_name is not None:
         response = run_workflow(workflow_name)
+        conversation_store.append({"role": "user", "content": message})
+        conversation_store.append({"role": "assistant", "content": response})
+        return response
+
+    autonomous_match = _AUTONOMOUS_RE.match(message.strip())
+    if autonomous_match:
+        response = run_autonomous(autonomous_match.group(1).strip())
         conversation_store.append({"role": "user", "content": message})
         conversation_store.append({"role": "assistant", "content": response})
         return response
