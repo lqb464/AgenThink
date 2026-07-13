@@ -1,3 +1,4 @@
+from app.agent import match_plan_request, run_planning
 from app.core.client import llm
 from app.core.config import settings
 from app.memory import extract_and_store, format_memory
@@ -39,6 +40,13 @@ def chat(message: str) -> str:
         conversation_store.append({"role": "user", "content": message})
         conversation_store.append({"role": "assistant", "content": memory_ack})
         return memory_ack
+
+    goal = match_plan_request(message)
+    if goal is not None:
+        response = run_planning(goal)
+        conversation_store.append({"role": "user", "content": message})
+        conversation_store.append({"role": "assistant", "content": response})
+        return response
 
     tool_hit = run_tool(message)
     if tool_hit is not None:
