@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app.api.chat import router as chat_router
 
@@ -15,3 +16,6 @@ def health():
     return {
         "status": "ok"
     }
+
+
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")

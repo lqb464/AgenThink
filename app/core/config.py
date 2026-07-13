@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     ESTIMATED_COST_PER_CALL_USD: float = 0.0002
 
     # RAG Service integration
-    RAG_SERVICE_URL: str = "http://localhost:8000"
+    RAG_SERVICE_URL: str = "http://localhost:8001"
     RAG_PROJECT_ID: str = "agentthink_default"
 
     model_config = SettingsConfigDict(

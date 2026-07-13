@@ -35,11 +35,19 @@ def chat_endpoint(
     _check_auth(authorization)
     _check_rate_limit()
 
-    answer, meta = chat_with_trace(request.message)
-
-    return ChatResponse(
-        response=answer,
-        request_id=meta.get("request_id"),
-        cached=bool(meta.get("cached")),
-        estimated_cost_usd=meta.get("estimated_cost_usd"),
-    )
+    try:
+        answer, meta = chat_with_trace(request.message)
+        return ChatResponse(
+            response=answer,
+            request_id=meta.get("request_id"),
+            cached=meta.get("cached", False),
+            estimated_cost_usd=meta.get("estimated_cost_usd"),
+        )
+    except Exception as exc:
+        logger.error("Chat endpoint error: %s", exc)
+        # Return a friendly message instead of a 500 error page
+        return ChatResponse(
+            response=f"⚠️ [Lỗi dịch vụ LLM] {str(exc)}. Dịch vụ Gemini đang bị quá tải hoặc gặp lỗi kết nối (HTTP 503). Vui lòng thử lại sau vài giây.",
+            cached=False,
+            estimated_cost_usd=0.0
+        )

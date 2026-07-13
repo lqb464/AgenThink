@@ -5,9 +5,11 @@ from app.tools.search import match_search
 from app.tools.weather import match_weather
 from app.tools.vision import match_vision
 from app.tools.fashion import match_fashion
+from app.tools.tryon import match_tryon
 
 # Order matters: first matching tool wins.
 TOOLS: list[tuple[str, Callable[[str], str | None]]] = [
+    ("tryon", match_tryon),
     ("fashion", match_fashion),
     ("vision", match_vision),
     ("calculator", match_calculator),
