@@ -1,5 +1,10 @@
-from app.agent.planner import match_plan_request, run_planning
-from app.agent.reflection import reflect_until_good
+from app.agent import (
+    match_plan_request,
+    match_workflow,
+    reflect_until_good,
+    run_planning,
+    run_workflow,
+)
 from app.core.client import llm
 from app.core.config import settings
 from app.memory import extract_and_store, format_memory
@@ -41,6 +46,13 @@ def chat(message: str) -> str:
         conversation_store.append({"role": "user", "content": message})
         conversation_store.append({"role": "assistant", "content": memory_ack})
         return memory_ack
+
+    workflow_name = match_workflow(message)
+    if workflow_name is not None:
+        response = run_workflow(workflow_name)
+        conversation_store.append({"role": "user", "content": message})
+        conversation_store.append({"role": "assistant", "content": response})
+        return response
 
     goal = match_plan_request(message)
     if goal is not None:
