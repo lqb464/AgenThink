@@ -3,9 +3,11 @@ from collections.abc import Callable
 from app.tools.calculator import match_calculator
 from app.tools.search import match_search
 from app.tools.weather import match_weather
+from app.tools.vision import match_vision
 
 # Order matters: first matching tool wins.
 TOOLS: list[tuple[str, Callable[[str], str | None]]] = [
+    ("vision", match_vision),
     ("calculator", match_calculator),
     ("weather", match_weather),
     ("search", match_search),
