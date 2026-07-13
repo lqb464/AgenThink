@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     CACHE_ENABLED: bool = True
     ESTIMATED_COST_PER_CALL_USD: float = 0.0002
 
+    # RAG Service integration
+    RAG_SERVICE_URL: str = "http://localhost:8000"
+    RAG_PROJECT_ID: str = "agentthink_default"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

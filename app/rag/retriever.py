@@ -1,9 +1,27 @@
+"""
+RAG retriever for AgenThink.
+
+Attempts to fetch relevant document chunks from the external RAG Service
+(RAnythinG). If the service is unavailable or returns an error, falls back
+to the built-in SimpleBM25 retriever over the static DOCUMENTS corpus.
+"""
+
+import logging
 import math
 import re
 from collections import Counter
 
+import httpx
+
+from app.core.config import settings
 from app.rag.documents import DOCUMENTS
 
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Fallback: minimal BM25 retriever over the static DOCUMENTS corpus
+# ---------------------------------------------------------------------------
 
 def _tokenize(text: str) -> list[str]:
     return re.findall(r"\w+", text.lower(), flags=re.UNICODE)
@@ -52,12 +70,88 @@ class SimpleBM25:
         return scored
 
 
-_retriever = SimpleBM25(DOCUMENTS)
+_fallback_retriever = SimpleBM25(DOCUMENTS)
 
+
+def _fallback_retrieve(query: str, top_k: int) -> list[dict]:
+    """Return top-k docs from the in-memory static corpus using BM25."""
+    hits = _fallback_retriever.score(query)[:top_k]
+    return [doc for _score, doc in hits]
+
+
+# ---------------------------------------------------------------------------
+# Primary: call external RAG Service
+# ---------------------------------------------------------------------------
+
+def _retrieve_from_service(query: str, top_k: int, project_id: str) -> list[dict] | None:
+    """
+    Call the external RAG Service's /api/external/retrieve endpoint.
+
+    Returns a list of chunk dicts on success, or None if the call fails
+    (so callers can apply the fallback strategy).
+    """
+    url = f"{settings.RAG_SERVICE_URL.rstrip('/')}/api/external/retrieve"
+    try:
+        response = httpx.post(
+            url,
+            json={
+                "project_id": project_id,
+                "query": query,
+                "top_k": top_k,
+            },
+            timeout=10.0,
+        )
+        response.raise_for_status()
+        data = response.json()
+        chunks = data.get("chunks", [])
+        if chunks:
+            # Convert service chunk format → dict compatible with format_context
+            return [
+                {
+                    "id": chunk.get("source", "rag-service"),
+                    "title": chunk.get("source", "Nguồn tài liệu"),
+                    "content": chunk.get("text", ""),
+                }
+                for chunk in chunks
+            ]
+        return []
+    except httpx.ConnectError:
+        logger.warning("RAG Service unavailable at %s — falling back to BM25", url)
+        return None
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            # Project not found means no documents have been uploaded yet
+            logger.info(
+                "RAG Service: project '%s' not found — falling back to BM25", project_id
+            )
+        else:
+            logger.warning(
+                "RAG Service returned HTTP %s — falling back to BM25",
+                e.response.status_code,
+            )
+        return None
+    except Exception as e:
+        logger.warning("Error calling RAG Service: %s — falling back to BM25", e)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def retrieve(query: str, top_k: int = 2) -> list[dict]:
-    hits = _retriever.score(query)[:top_k]
-    return [doc for _score, doc in hits]
+    """
+    Retrieve the most relevant document chunks for *query*.
+
+    1. Try the external RAG Service (Hybrid Dense + BM25 + Reranking).
+    2. If unavailable, fall back to the simple in-memory BM25 retriever.
+    """
+    project_id = settings.RAG_PROJECT_ID
+    result = _retrieve_from_service(query, top_k, project_id)
+    if result is not None:
+        return result
+    # Fallback path
+    return _fallback_retrieve(query, top_k)
 
 
 def format_context(docs: list[dict]) -> str:
