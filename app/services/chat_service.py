@@ -1,6 +1,7 @@
 import re
 
 from app.agent.autonomous import run_autonomous
+from app.agent.multi_agent import run_multi_agent
 from app.agent.planner import match_plan_request, run_planning
 from app.agent.reflection import reflect_until_good
 from app.agent.workflow import match_workflow, run_workflow
@@ -15,6 +16,10 @@ conversation_store: list[dict[str, str]] = []
 
 _AUTONOMOUS_RE = re.compile(
     r"^(?:Goal|Mục tiêu)\s*[:\-]\s*(.+)$",
+    flags=re.IGNORECASE,
+)
+_MULTI_AGENT_RE = re.compile(
+    r"^(?:Team|Multi-agent|Nhóm agent)\s*[:\-]\s*(.+)$",
     flags=re.IGNORECASE,
 )
 
@@ -54,6 +59,13 @@ def chat(message: str) -> str:
     workflow_name = match_workflow(message)
     if workflow_name is not None:
         response = run_workflow(workflow_name)
+        conversation_store.append({"role": "user", "content": message})
+        conversation_store.append({"role": "assistant", "content": response})
+        return response
+
+    multi_match = _MULTI_AGENT_RE.match(message.strip())
+    if multi_match:
+        response = run_multi_agent(multi_match.group(1).strip())
         conversation_store.append({"role": "user", "content": message})
         conversation_store.append({"role": "assistant", "content": response})
         return response
