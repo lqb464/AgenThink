@@ -1,13 +1,21 @@
 from app.core.client import llm
 from app.core.config import settings
+from app.rag import format_context, retrieve
 from app.tools import run_tool
 
 
 conversation_store: list[dict[str, str]] = []
 
 
-def _build_prompt(message: str) -> str:
+def _build_prompt(message: str, rag_context: str = "") -> str:
     prompt_lines = [f"System: {settings.SYSTEM_PROMPT}"]
+
+    if rag_context:
+        prompt_lines.append(rag_context)
+        prompt_lines.append(
+            "Answer using the retrieved documents when relevant. "
+            "If the documents do not contain the answer, say you do not know."
+        )
 
     if conversation_store:
         history_lines = [
@@ -29,7 +37,9 @@ def chat(message: str) -> str:
         conversation_store.append({"role": "assistant", "content": tool_result})
         return tool_result
 
-    prompt = _build_prompt(message)
+    docs = retrieve(message, top_k=2)
+    rag_context = format_context(docs)
+    prompt = _build_prompt(message, rag_context=rag_context)
     response = llm.chat(prompt)
 
     conversation_store.append({"role": "user", "content": message})
