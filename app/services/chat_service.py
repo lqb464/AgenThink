@@ -1,4 +1,5 @@
-from app.agent import match_plan_request, run_planning
+from app.agent.planner import match_plan_request, run_planning
+from app.agent.reflection import reflect_until_good
 from app.core.client import llm
 from app.core.config import settings
 from app.memory import extract_and_store, format_memory
@@ -63,7 +64,8 @@ def chat(message: str) -> str:
         rag_context=rag_context,
         memory_context=memory_context,
     )
-    response = llm.chat(prompt)
+    draft = llm.chat(prompt)
+    response = reflect_until_good(message, draft)
 
     conversation_store.append({"role": "user", "content": message})
     conversation_store.append({"role": "assistant", "content": response})
