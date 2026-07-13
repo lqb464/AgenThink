@@ -1,5 +1,5 @@
 """
-Vision tool for AgenThink to call the external VisionLens service.
+Vision tool for AgenThink to call the external dOCRead service.
 
 Triggers:
 - "OCR hình ảnh <path>"
@@ -18,7 +18,7 @@ VISION_SERVICE_URL = "http://localhost:8002"
 
 
 def _call_vision_api(endpoint: str, file_path: str, params: dict = None) -> str:
-    """Helper to send a local file to the VisionLens API."""
+    """Helper to send a local file to the dOCRead API."""
     if not os.path.exists(file_path):
         return f"Lỗi: Không tìm thấy tệp tin hình ảnh tại đường dẫn '{file_path}'"
 
@@ -46,9 +46,9 @@ def _call_vision_api(endpoint: str, file_path: str, params: dict = None) -> str:
             return str(res_data)
             
     except httpx.ConnectError:
-        return f"Lỗi: Không kết nối được tới dịch vụ VisionLens tại {VISION_SERVICE_URL}. Vui lòng bật service trước."
+        return f"Lỗi: Không kết nối được tới dịch vụ dOCRead tại {VISION_SERVICE_URL}. Vui lòng bật service trước."
     except Exception as exc:
-        logger.error("VisionLens tool failed: %s", exc)
+        logger.error("dOCRead tool failed: %s", exc)
         return f"Lỗi xử lý hình ảnh: {exc}"
 
 
