@@ -1,0 +1,67 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "search_documents",
+      "description": "Search uploaded private documents in the local Knowledge base (RAG). Prefer this FIRST when the user asks about uploaded PDFs/DOCX/MD, company policies, project docs, or anything that should be answered from their Knowledge panel sources. Do NOT use for breaking news or public encyclopedic facts — use web_search / wikipedia_lookup / arxiv_search instead. Always cite filenames from the returned chunks.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The search query to find relevant documents"
+          },
+          "top_k": {
+            "type": "integer",
+            "description": "Number of top results to return (default: 4)"
+          },
+          "allowed_sources": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional filename filter — only search these source files (must match uploaded names)"
+          }
+        },
+        "required": ["query"]
+      },
+      "_handler": "search_documents"
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "summarize_documents",
+      "description": "Generate a summary of documents in the local Knowledge project. Use when the user asks to tóm tắt / summarize uploaded docs. Prefer over web_search for private uploads.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional list of source filenames to summarize; omit for all"
+          }
+        },
+        "required": []
+      },
+      "_handler": "summarize_documents"
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "generate_document_report",
+      "description": "Generate a research/study report from uploaded documents. Use when the user asks for báo cáo / report based on their Knowledge sources.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional list of source filenames; omit for all"
+          }
+        },
+        "required": []
+      },
+      "_handler": "generate_document_report"
+    }
+  }
+]

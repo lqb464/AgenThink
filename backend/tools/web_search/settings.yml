@@ -1,0 +1,21 @@
+# SearXNG config for the web_search tool (mounted at /etc/searxng in Docker).
+# JSON format MUST be enabled. Limiter off = no Redis for local use.
+
+use_default_settings: true
+
+general:
+  instance_name: "AgenThink SearXNG"
+
+server:
+  # Local-only secret; rotate if you expose this instance beyond localhost.
+  secret_key: "agenthink-local-demo-change-me"
+  limiter: false
+  image_proxy: false
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "auto"
+  formats:
+    - html
+    - json

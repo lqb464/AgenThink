@@ -1,0 +1,20 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "ocr_image",
+      "description": "Extract text from an uploaded image using Gemini vision OCR. Use when user asks to read text, recognize characters, or extract content from an image, photo, document, or screenshot.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "image_description": {
+            "type": "string",
+            "description": "Brief description of what image to OCR, used for logging. Example: 'the uploaded receipt photo'"
+          }
+        },
+        "required": ["image_description"]
+      },
+      "_handler": "ocr_image"
+    }
+  }
+]

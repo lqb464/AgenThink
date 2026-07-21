@@ -1,0 +1,66 @@
+# AgenThink stack: API + UI + SearXNG (web_search)
+#
+#   copy .env.example .env   # fill GEMINI_* / JWT_SECRET
+#   docker compose up --build -d
+#   open http://localhost:3000
+#
+# RAG + OCR run in-process inside agenthink-api.
+# LLM (Gemini / OpenAI / Ollama / vLLM) runs on the HOST.
+#
+# One compose file = many containers on one Docker engine (not one container).
+
+services:
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: agenthink-searxng
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/tools/web_search:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080/
+
+  agenthink-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agenthink-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      DATABASE_URL: sqlite:////data/chat_memory.db
+      RAG_DATA_DIR: /data/rag
+      # Docker network DNS — overrides host .env localhost URL
+      SEARXNG_URL: http://searxng:8080
+      AUTH_REQUIRED: ${AUTH_REQUIRED:-true}
+      JWT_SECRET: ${JWT_SECRET:-change-me-dev-only-not-for-production}
+      SEED_DEMO_USER: ${SEED_DEMO_USER:-true}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@local}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-change-me}
+    volumes:
+      - agenthink_data:/data
+    depends_on:
+      - searxng
+
+  agenthink-ui:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agenthink-ui
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      INTERNAL_API_URL: http://agenthink-api:8000
+      PORT: 3000
+    depends_on:
+      - agenthink-api
+
+volumes:
+  agenthink_data:

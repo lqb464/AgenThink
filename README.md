@@ -1,52 +1,82 @@
 # AgenThink
 
-Learning project: build an AI agent step by step, from a basic chatbot to a production-ready agent.
+Multi-user AI agent: chat with tool calling, streaming, JWT auth, **in-process RAG (Tri thức)**, and **Gemini vision OCR** — all inside this single repo.
 
-## Levels
+## Layout
 
-| Level | Commit theme | What you learn |
-| ----- | ------------ | -------------- |
-| 0 | Basic chatbot | LLM API call |
-| 1 | Chat with history | Conversation messages |
-| 2 | System prompt | Persona / identity |
-| 3 | Tool calling | One external tool |
-| 4 | Multiple tools | Tool routing |
-| 5 | RAG | BM25 retrieval over private docs |
-| 6 | Long-term memory | Persistent user facts (SQLite) |
-| 7 | Planning | Plan → execute → merge |
-| 8 | Reflection | Critique and retry |
-| 9 | Workflow | Fixed multi-step pipelines |
-| 10 | Autonomous | Goal → act → observe loop |
-| 11 | Multi-agent | Research / Coder / Reviewer / Writer |
-| 12 | Production | Auth, rate limit, cache, retry, tracing, cost |
+| Folder | Role |
+| ------ | ---- |
+| `backend/` | FastAPI API (+ `backend/Dockerfile`) |
+| `frontend/` | Next.js UI (+ `frontend/Dockerfile`) |
 
-## Run
+## Features
 
-```bash
-uv sync
-uv run uvicorn app.main:app --reload
+- **Agent loop** — plan → tools → observe → reflect, with SSE progress
+- **Multi-user auth** — register / login; isolated sessions + knowledge per user
+- **Tri thức (RAG)** — upload PDF/DOCX/MD/TXT → chunk → Gemini embeddings → cosine retrieve
+- **OCR** — Gemini multimodal extract text from uploaded images
+- **Web search** — SearXNG (in Docker Compose) + Wikipedia / arXiv tools
+- **Built-in tools** — calculator, weather, memory
+
+## Quick start
+
+```powershell
+copy .env.example .env
+# Set GEMINI_API_KEY and JWT_SECRET
+
+docker compose up --build -d
 ```
 
-Health check: `GET /health`  
-Chat: `POST /chat` with `{"message": "..."}`
+Open [http://localhost:3000](http://localhost:3000).
 
-Optional production env:
+| | |
+| - | - |
+| UI | http://localhost:3000 |
+| OpenAPI | http://localhost:8000/docs |
+| Health | http://localhost:8000/api/health |
 
-- `API_TOKEN` — require `Authorization: Bearer <token>`
-- `RATE_LIMIT_MAX_CALLS` / `RATE_LIMIT_WINDOW_SECONDS`
-- `CACHE_ENABLED`
-- `ESTIMATED_COST_PER_CALL_USD`
+Demo user (if seeded): `demo@local` / `change-me`.
 
-## Try
+### Dev without Docker
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r backend/requirements.txt
+copy .env.example .env
+# Set GEMINI_API_KEY and JWT_SECRET
+
+python -m backend
+# Dev reload: set RELOAD=1   or   python -m backend  with RELOAD=true
+# UI: cd frontend && npm install && npm run dev
+```
+
+## Architecture
+
+```text
+Browser (:3000)  →  AgenThink API (:8000)  →  Gemini / local LLM
+                         │
+                         ├── Local RAG  (data/rag/{project_id}/)
+                         ├── Vision OCR (Gemini multimodal)
+                         └── SearXNG (:8080)  web_search
+```
+
+## Configuration
+
+| Variable | Role |
+| -------- | ---- |
+| `GEMINI_*` / `OPENAI_*` | LLM + embeddings + OCR |
+| `RAG_DATA_DIR` | Local knowledge store (default `./data/rag`) |
+| `JWT_SECRET`, `AUTH_REQUIRED` | Auth |
+| `SEARXNG_URL` | Web search (Compose sets `http://searxng:8080`; local API use `http://localhost:8080`) |
+
+## Example prompts
 
 ```text
 Tính 2 + 3
-Thời tiết ở Hà Nội
-Tìm BM25
-Nội quy nghỉ phép của công ty là gì?
-Nhớ rằng User thích Python
-Lập kế hoạch du lịch Nhật 7 ngày
-Chạy workflow bao-cao-doanh-thu
-Goal: Tính thuế VAT của 7 triệu
-Team: Giải thích BM25
+Nội quy nghỉ phép của công ty là gì?   (demo BM25 corpus if no uploads)
+Tóm tắt các tài liệu trong Tri thức
+OCR / đọc chữ trong ảnh vừa upload
 ```
+
+Repo: https://github.com/lqb464/AgenThink

@@ -1,0 +1,78 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "calculator",
+      "description": "Evaluate a mathematical expression. Use for any arithmetic calculation, unit conversion involving math, percentages, tax calculations, etc.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "description": "Mathematical expression to evaluate. Example: '7000000 * 0.1', '(100 + 30) / 100 * 365'"
+          }
+        },
+        "required": ["expression"]
+      },
+      "_service": null,
+      "_handler": "calculator"
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_weather",
+      "description": "Get current weather information for a city in Vietnam. Available cities: Hà Nội, Đà Nẵng, Hồ Chí Minh / Sài Gòn.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "description": "City name in Vietnamese. Example: 'Hà Nội', 'Đà Nẵng', 'Hồ Chí Minh'"
+          }
+        },
+        "required": ["city"]
+      },
+      "_service": null,
+      "_handler": "weather"
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search_knowledge",
+      "description": "Deprecated alias of web_search (SearXNG). Prefer web_search, wikipedia_lookup, or arxiv_search for research.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query"
+          }
+        },
+        "required": ["query"]
+      },
+      "_service": null,
+      "_handler": "web_search"
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "remember_fact",
+      "description": "Store a fact about the user in long-term memory. Use when the user tells you personal information, preferences, or asks you to remember something.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "fact": {
+            "type": "string",
+            "description": "The fact to remember. Example: 'User thích Python', 'Tên user là Minh'"
+          }
+        },
+        "required": ["fact"]
+      },
+      "_service": null,
+      "_handler": "memory"
+    }
+  }
+]

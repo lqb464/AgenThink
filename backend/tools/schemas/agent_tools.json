@@ -1,0 +1,78 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "create_plan",
+      "description": "Create a step-by-step plan for a complex goal. Use when the user asks to plan something, organize tasks, or needs a structured approach to a problem. Examples: travel planning, project planning, report writing.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string",
+            "description": "The goal to create a plan for. Example: 'Du lịch Nhật 7 ngày', 'Viết báo cáo doanh thu Q1'"
+          }
+        },
+        "required": ["goal"]
+      },
+      "_service": null,
+      "_handler": "planning"
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "run_autonomous",
+      "description": "Learning-demo only: heuristic autonomous loop. Prefer calling concrete tools yourself (calculator, weather, search, etc.) via the main function-calling loop. Use run_autonomous only if the user explicitly asks for the autonomous learning demo.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string",
+            "description": "The goal for the autonomous agent. Example: 'Tính thuế VAT của 7 triệu'"
+          }
+        },
+        "required": ["goal"]
+      },
+      "_service": null,
+      "_handler": "autonomous"
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "run_multi_agent",
+      "description": "Run a multi-agent collaboration with specialized agents (Research, Coder, Reviewer, Writer) working together on a task. Best for complex questions requiring research, analysis, and synthesis.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string",
+            "description": "The task for the multi-agent team. Example: 'Giải thích BM25 algorithm'"
+          }
+        },
+        "required": ["task"]
+      },
+      "_service": null,
+      "_handler": "multi_agent"
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "run_workflow",
+      "description": "Run a predefined multi-step workflow pipeline. Available workflows: 'bao-cao-doanh-thu' (revenue report). Use when user explicitly asks to run a workflow.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "workflow_name": {
+            "type": "string",
+            "description": "Name of the workflow to run. Example: 'bao-cao-doanh-thu'"
+          }
+        },
+        "required": ["workflow_name"]
+      },
+      "_service": null,
+      "_handler": "workflow"
+    }
+  }
+]

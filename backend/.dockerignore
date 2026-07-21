@@ -1,0 +1,16 @@
+# backend/ Dockerfile build context
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+.env
+.env.*
+*.db
+.pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+.ruff_cache
+.DS_Store
+*.md
